@@ -1,8 +1,8 @@
 # WarbandSummoner — Design Specification
 
-A Valheim mod that turns the player into a summoner: a squad of up to four
-persistent minions that fight and haul cargo, unlocked and upgraded by
-spending creature trophies.
+A Valheim mod that turns the player into a summoner: a squad of up to five
+persistent minions — four melee and one archer — that fight and haul cargo,
+unlocked and upgraded by spending creature trophies.
 
 **Target game version:** Valheim 1.0.12
 **Framework:** BepInEx 5.4.2350+ / HarmonyX
@@ -47,16 +47,27 @@ Two independent axes:
 
 ### 2.1 Slots
 
-The player has exactly **four minion slots**, indexed 0–3.
+The player has **five minion slots** in two groups:
 
-Each slot is either unowned, or owned at a specific (tier, rank) pair.
+- **Melee group** — slots 0–3. Buy from the melee tier ladder.
+- **Ranged group** — slot 4. Buys from a separate ranged tier ladder.
 
-- Slot 0 is owned at tier 0 (Greyling), rank 1, from the moment the mod
-  loads, at no cost. A new character can summon immediately.
-- Slots 1–3 begin unowned.
+Each slot is either unowned, or owned at a specific (tier, rank) pair within
+its group's ladder.
 
-Slot state persists on the player: four (tier, rank) pairs. That is the
+- Slot 0 is owned at melee tier 0 (Greyling), rank 1, from the moment the
+  mod loads, at no cost. A new character can summon immediately.
+- Slots 1–3 and the ranged slot begin unowned. The ranged slot is never
+  free; its first purchase unlocks it.
+
+Slot state persists on the player: five (tier, rank) pairs. That is the
 entire progression state.
+
+The ranged slot exists because a squad of four melee bodies plays the same
+in every fight; one archer hanging back gives the squad a shape. It is
+capped at one because ranged minions are the ones most likely to be
+useless (no line of sight) or annoying (kiting) in numbers. It is archers
+only in v1 — see 2.3 for why casters are deferred.
 
 ### 2.2 Ranks
 
@@ -89,7 +100,7 @@ Tiers are an ordered list defined in config. Each entry:
 | `id` | Stable string key, used in config and logs |
 | `displayName` | Shown in HUD and messages |
 | `basePrefab` | Creature prefab to clone |
-| `trophyPrefab` | Item prefab name of the trophy that buys this tier |
+| `trophyPrefab` | Item prefab name of the trophy that buys this tier. Empty means the tier is material-only (see 2.5). |
 | `trophyCount` | Trophies per purchase (default 1) |
 | `fallbackMaterial` | Item prefab name of the material fallback (see 2.5). Empty means no fallback exists for this tier. |
 | `fallbackCount` | Quantity of `fallbackMaterial` per purchase. **Per-tier, not global.** Initial value 2 for all tiers; expected to be tuned heavily. |
@@ -98,22 +109,60 @@ Tiers are an ordered list defined in config. Each entry:
 | `equipmentLoadout` | Items to equip on spawn (drives damage output) |
 | `summonStaminaCost` | Stamina cost to summon at this tier |
 
-Proposed initial ladder (starting points for tuning, not balance decisions):
+There are two ladders, one per slot group. Both are lists of the same
+record type.
 
-0. Greyling — **greylings drop no trophy**; bought with the Greydwarf trophy
-   (same biome and species family), resin fallback
-1. Skeleton
-2. Draugr
-3. Draugr Elite
-4. Fenring
-5. Seeker
-6. Charred Warrior (Ashlands)
-7. Jötun Warrior (Deep North)
+Ladder selection principles:
+
+- One "grunt" per biome, plus an "elite" in biomes that have a good one, so
+  progression is smooth and no biome is skipped.
+- **Fallback material is the creature's own guaranteed drop** (eyes, bone
+  fragments, entrails, fangs, scrap). "You've killed enough of them" reads
+  naturally, and a 50–100% drop against a 5–10% trophy leaves plenty of
+  room to tune the count so the fallback is clearly worse but never
+  unreachable.
+- **Nothing huge.** Trolls, Abominations, Lox, Seeker Brutes, Morgen, Gjall
+  would wedge in every doorway and trivialise fights. Excluded on purpose.
+- **No AoE.** Verified in 1.0.12: projectiles from a non-player owner pass
+  through friendlies by default, but `Aoe` hits friendlies by default.
+  Shamans, mages and anything with a cloud or breath attack would hurt the
+  player and the rest of the squad. Excluded from v1; see section 9.
+
+**Melee ladder** (starting points for tuning, not balance decisions):
+
+| # | Creature | Biome | Cost |
+|---|---|---|---|
+| 0 | Greyling | Meadows | **Resin only** — greylings drop no trophy, and a Meadows-level creature that is cheap to field fills the empty early stretch |
+| 1 | Greydwarf | Black Forest | TrophyGreydwarf / GreydwarfEye |
+| 2 | Skeleton | Meadows crypts / Black Forest | TrophySkeleton / BoneFragments |
+| 3 | Greydwarf Brute | Black Forest | TrophyGreydwarfBrute / GreydwarfEye |
+| 4 | Draugr | Swamp | TrophyDraugr / Entrails |
+| 5 | Draugr Elite | Swamp | TrophyDraugrElite / Entrails |
+| 6 | Wolf | Mountain | TrophyWolf / WolfFang |
+| 7 | Fenring | Mountain | TrophyFenring / WolfFang |
+| 8 | Fuling | Plains | TrophyGoblin / BlackMetalScrap |
+| 9 | Fuling Berserker | Plains | TrophyGoblinBrute / BlackMetalScrap |
+| 10 | Seeker | Mistlands | TrophySeeker / Carapace |
+| 11 | Charred Warrior | Ashlands | TrophyCharredMelee / CharredBone |
+| 12 | Jötun Warrior | Deep North | TrophyJotunWarrior / Leatherstraps — model size unverified; swap for Skeleton_DeepNorth, Bjorn or Elaking if it turns out giant-sized |
+
+**Ranged ladder** (archers only):
+
+| # | Creature | Biome | Cost |
+|---|---|---|---|
+| 0 | Skeleton archer | Meadows crypts / Black Forest | TrophySkeleton / BoneFragments — `Skeleton` clone with a bow forced through the loadout |
+| 1 | Draugr archer | Swamp | TrophyDraugr / Entrails |
+| 2 | Fuling archer | Plains | TrophyGoblin / BlackMetalScrap |
+| 3 | Charred archer | Ashlands | TrophyCharredArcher / CharredBone |
+
+Mountain, Mistlands and Deep North have no pure archer, so the ranged slot
+lags a biome behind the melee squad through those stretches. Acceptable for
+a support role.
 
 Prefab names, drop rates, and alternatives for every tier are in
 [PREFABS.md](PREFABS.md).
 
-The ladder is data. Adding, removing, or reordering tiers must require no
+The ladders are data. Adding, removing, or reordering tiers must require no
 code change.
 
 ### 2.4 Progression
@@ -128,10 +177,15 @@ the only place in this design that would touch hostile combat internals.
 Trophy-based ranking delivers a similar progression feel with zero patch
 surface.
 
-**Full cost of maxing one tier:** 4 slots × 2 ranks = 8 trophies. Slot 0 is
-free at tier 0 rank 1, so tier 0 costs 7.
+**Full cost of maxing one melee tier:** 4 slots × 2 ranks = 8 trophies. Slot
+0 is free at tier 0 rank 1, so tier 0 costs 7. The ranged slot costs 2 per
+tier.
 
 #### The upgrade action
+
+Everything below runs against **one slot group and its ladder** — melee or
+ranged, chosen by the player at the keypress (see 4.5). The groups never
+compete for a purchase.
 
 1. Player triggers the upgrade action (see 4.5).
 2. Determine the highest tier `T` the player can currently afford, by trophy
@@ -202,10 +256,10 @@ skeletons, surtling cores, black metal, and so on.
   so a player always prefers to find the trophy, but reachable enough that a
   bad RNG streak never stalls progression. If players route around trophies
   entirely, the count is too low.
-- An empty `fallbackMaterial` means no fallback exists for that tier. Tier 0
-  is a likely candidate — greylings drop resin and wood, neither scarce
-  enough to be a meaningful cost at any quantity. The drop-rate multiplier is
-  the better fix there.
+- An empty `fallbackMaterial` means no fallback exists for that tier.
+- An empty `trophyPrefab` means the tier is **material-only**: the fallback
+  is the only price. Melee tier 0 (Greyling, resin) is the one case in the
+  default ladders. A tier with both fields empty is a config error.
 
 **Spend priority:** when the player can afford a purchase both ways, spend
 the trophy by default (it is the scarcer resource and players would rather
@@ -251,7 +305,7 @@ across reloads in the vanilla serialization path, and damage modifiers do not
 persist at all. Storing inputs and deriving outputs makes reload correctness
 free and turns rebalancing into a config edit rather than a save migration.
 
-**Store on the player:** the four (tier, rank) slot pairs.
+**Store on the player:** the five (tier, rank) slot pairs, tagged by group.
 
 ### 3.3 Counting and cap
 
@@ -330,6 +384,10 @@ fall through to the next-highest living minion. Doing nothing here is a bug —
 it is precisely the situation in which the player presses the key. Where two
 slots share a tier, prefer the higher rank.
 
+Tier indices are not comparable across ladders, so the tap order is: melee
+minions by tier then rank, then the ranged minion last. Hold recalls
+everything regardless of group.
+
 This ability doubles as the general get-unstuck action for minions lost to
 terrain, doorways, portals, and boats.
 
@@ -350,6 +408,13 @@ Spends a trophy or material fallback per section 2.4/2.5. Must report clearly
 what was bought, what was spent, and which slot changed — the auto-selection
 is invisible otherwise.
 
+**Plain press** runs the upgrade against the melee group and its ladder.
+**Modifier + press** (Shift by default, config-bound) runs it against the
+ranged group and its ladder. This is the only destination choice the player
+ever makes, and it exists because several trophies appear in both ladders
+(skeletons and draugr come in melee and archer flavours); without the
+modifier the resolver could not know which the player meant.
+
 ---
 
 ## 5. Behaviour
@@ -367,7 +432,8 @@ Each slot has a fixed local-space offset from the player. The minion follows
 a point derived from the player's transform rotated by facing, not the
 player's transform directly.
 
-Four offsets in config, forming a loose arc behind and beside the player.
+One offset per slot in config — five by default — forming a loose arc
+behind and beside the player, with the ranged slot's offset furthest back.
 Recall placement (4.3) drops minions ahead of facing; the formation holds the
 rest back.
 
@@ -401,9 +467,10 @@ rebuild to change:
 - Recall hold duration, both recall cooldowns
 - Heal radius, heal amount, heal stamina cost
 - Base follow distance
-- Four formation offsets
+- Formation offsets (one per slot)
 - Summon stamina costs (per tier)
-- Slot count (default 4 — allow raising it)
+- Melee slot count (default 4 — allow raising it) and ranged slot count
+  (default 1 — allow raising it, or 0 to disable the ranged group)
 - Max rank (default 2 — raising it is unsupported without verifying star
   rendering, but expose it)
 
@@ -495,6 +562,10 @@ happens on top of a working foundation.
 
 ## 9. Deferred
 
+- Caster minions (Greydwarf Shaman, Fuling Shaman, Dvergr mages, Charred
+  Mage, Jötun Witch). Blocked on friendly fire: `Aoe.m_hitFriendly` defaults
+  to true, so every spawned AoE instance from a minion would need patching
+  to skip the owner's allies. Ranged ladder is archers only until then.
 - Hold-progress indicator for recall
 - HUD showing slot tiers, ranks, and minion health
 - Player choice of upgrade destination (depth vs breadth)

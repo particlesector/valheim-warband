@@ -1,13 +1,14 @@
 # WarbandSummoner
 
-A [Valheim](https://www.valheimgame.com/) mod that turns the player into a summoner. Command a squad of up to four persistent minions that fight alongside you and carry your loot, unlocked and upgraded by spending creature trophies.
+A [Valheim](https://www.valheimgame.com/) mod that turns the player into a summoner. Command a squad of up to five persistent minions — four melee and one archer — that fight alongside you and carry your loot, unlocked and upgraded by spending creature trophies.
 
 > **Status:** pre-alpha. Design is complete; implementation has not started. Nothing here is playable yet.
 
 ## Features
 
-- **Four minion slots.** Slot 0 is yours from the moment the mod loads. Earn the rest.
+- **Five minion slots.** Four melee, one archer. Your first greyling is yours from the moment the mod loads; earn the rest.
 - **Trophy-driven progression.** Spend a creature's trophy to unlock it as a minion; spend another to rank it up. No boss gates, no grinding stats — just what you carry home.
+- **A ladder for every biome.** Greyling to Jötun Warrior across thirteen melee tiers, with a separate archer ladder for the ranged slot.
 - **Two ranks per tier**, expressed as vanilla 1- and 2-star creatures. Tiers can be skipped; rank resets on a tier change.
 - **Material fallback.** Each tier can accept a common material (bone fragments, surtling cores, …) in place of its trophy, so a bad drop streak never stalls you.
 - **Abilities on hotkeys:** summon, AoE heal, recall (tap for one, hold for all), attack my target, upgrade slot.

@@ -57,8 +57,8 @@ Goal: a plugin that loads, logs its version, and a written answer to every
 - [x] Decompiled both game assemblies with `ilspycmd`.
 - [x] `docs/API-NOTES.md` written — every DESIGN §7 item answered.
 - [x] `docs/PREFABS.md` — full creature/trophy catalogue from a runtime
-      dump (`[Debug] DumpPrefabCatalogue`), ladder filled through tier 7.
-      Discovery: greylings drop no trophy; tier 0 uses `TrophyGreydwarf`.
+      dump (`[Debug] DumpPrefabCatalogue`), melee and ranged ladders filled.
+      Discovery: greylings drop no trophy; tier 0 became material-only (resin).
 - [x] `ZNetScene.Awake` postfix confirmed to fire (catalogue dump uses it).
 
 **Done.** Phase 0 complete.
@@ -70,9 +70,11 @@ Goal: a plugin that loads, logs its version, and a written answer to every
 DESIGN §2. Lives entirely in `WarbandSummoner.Core`. No game types.
 
 - [ ] `TierDefinition` record (all fields from §2.3) and `TierTable` (ordered,
-      validates ids unique, indices stable).
-- [ ] `SlotState` — `(tierIndex, rank)` or unowned. `SlotSet` of N slots with
-      slot 0 pre-owned at (0, 1).
+      validates ids unique, indices stable). A tier may be trophy-only,
+      material-only, or both; neither is a validation error.
+- [ ] `SlotState` — `(tierIndex, rank)` or unowned. `SlotGroup` = a
+      `TierTable` plus N slots. Two groups: melee (4 slots, slot 0 pre-owned
+      at (0, 1)) and ranged (1 slot, unowned).
 - [ ] `IInventoryView` — abstract "how many of item X do I have" so the
       resolver is testable with a dictionary.
 - [ ] `UpgradeResolver.Resolve(slots, tiers, inventory, spendPriority)` →
@@ -81,9 +83,10 @@ DESIGN §2. Lives entirely in `WarbandSummoner.Core`. No game types.
       → lower tier → same tier rank 1 → fall through to T−1); rank reset;
       trophy-vs-fallback spend priority; per-tier trophyCount/fallbackCount.
 - [ ] Tests: skip-tier, rank reset on tier change, fallback used only when
-      trophy unaffordable (and inverted flag), fall-through to lower tier when
-      T offers nothing, no-op consumes nothing, slot 0 free, max rank cap,
-      full-maxed set → no-op.
+      trophy unaffordable (and inverted flag), material-only tier, fall-through
+      to lower tier when T offers nothing, no-op consumes nothing, slot 0 free,
+      ranged slot not free, max rank cap, full-maxed group → no-op, groups
+      never share a purchase.
 - [ ] Rank → `SetLevel` value mapping (`rank + 1`) as a single function with a
       test, so the off-by-one lives in exactly one place.
 
@@ -100,10 +103,10 @@ DESIGN §6.
       recall cooldowns, heal radius/amount/cost, follow distance, four
       formation offsets, slot count, max rank, drop-rate multiplier, spend
       priority flag.
-- [ ] `tiers.json` loader: write default ladder if missing, parse, validate
-      (prefab names non-empty, counts ≥ 1, no duplicate ids), log every
-      problem with the tier id, fall back to defaults on fatal error rather
-      than loading with zero tiers.
+- [ ] `tiers.json` loader: write default melee and ranged ladders if missing,
+      parse, validate (basePrefab non-empty, at least one of trophy/fallback,
+      counts ≥ 1, no duplicate ids), log every problem with the tier id, fall
+      back to defaults on fatal error rather than loading with zero tiers.
 - [ ] Config reload on `.cfg` change is nice-to-have; tiers.json reload is
       **not** — tier index is persisted in ZDOs, so reordering at runtime is
       unsafe. Document that tiers.json is read at startup only.
@@ -122,7 +125,8 @@ DESIGN §2.1, §3.2 (player half).
 - [ ] Version prefix in the string so a future format change can migrate.
 - [ ] Upgrade hotkey (§4.5) wired end-to-end: hotkey → resolver → consume
       items from `Player.m_inventory` → apply → message centre text stating
-      slot, tier, rank, and what was spent.
+      slot, tier, rank, and what was spent. Plain press = melee group,
+      modifier + press = ranged group.
 - [ ] Dev console command `warband` (config-gated) that dumps slot state,
       living minion ZDO keys, and cooldowns to the log.
 
@@ -140,8 +144,10 @@ DESIGN §3.1, §3.3, §7 critical note. Highest 1.0 risk; budget time.
       any spawn-effect components, register in `m_namedPrefabs`. Never touch
       the source prefab.
 - [ ] Clone setup: add `Tameable` (`m_commandable = true`, unsummon knobs at
-      zero), faction `Players`, `m_defaultItems` from the loadout. Compare
-      against vanilla's `Wolf_spiritcaller` / `Skeleton_Friendly`.
+      zero), faction `Players`, `m_defaultItems` from the loadout with the
+      random weapon/armour arrays emptied (the `Skeleton` prefab is used by
+      both ladders and must be forced melee or bow). Strip `Procreation` if
+      present. Compare against vanilla's `Wolf_spiritcaller` / `Skeleton_Friendly`.
 - [ ] `MinionSetup` component on the clone: on `Awake`, read tier/rank from
       ZDO and apply tame, follow (via `s_follow` = player name), `SetLevel`,
       damage modifiers, `Physics.IgnoreCollision` with the local player.
@@ -152,8 +158,9 @@ DESIGN §3.1, §3.3, §7 critical note. Highest 1.0 risk; budget time.
       cap, heal, recall, and the slot-occupancy check.
 - [ ] Cap enforced as soft state (§3.3): block summon, never despawn.
 
-**Done when:** four greylings follow the player, each with one star, none
-collide with the player, and pressing summon a fifth time is refused.
+**Done when:** four greylings and a skeleton archer follow the player, each
+with one star, none collide with the player, the archer's arrows pass
+through the player, and pressing summon with every slot filled is refused.
 
 ---
 
@@ -195,8 +202,8 @@ DESIGN §4.3.
 
 - [ ] Key-down starts a timer; key-up resolves tap vs hold against the config
       threshold.
-- [ ] Tap: highest-tier living minion, ties broken by rank; falls through to
-      next-highest if none. Hold: all living.
+- [ ] Tap: highest-tier living melee minion, ties broken by rank; falls
+      through to next-highest, then to the ranged minion. Hold: all living.
 - [ ] Placement: ahead of player facing at configurable distance, raycast to
       ground, never inside player collider.
 - [ ] Independent cooldowns; refused-for-cooldown message shows remaining
@@ -227,6 +234,7 @@ DESIGN §5.1, §5.2.
 - [ ] Raised follow stop distance, config-bound.
 - [ ] Per-slot follow target: an invisible GameObject per slot positioned at
       the rotated offset each frame; minion follows that instead of the player.
+      Ranged slot's offset sits furthest back.
 - [ ] Confirm combat still overrides follow (they should break formation to
       engage).
 

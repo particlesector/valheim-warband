@@ -11,21 +11,50 @@ chances <= 0.3 use the pseudo-random guarantee (see API-NOTES.md).
 
 ---
 
-## Proposed tier ladder
+## Default ladders
 
-| # | id | basePrefab | Faction | trophyPrefab | Trophy rate | fallbackMaterial (candidate) | Notes |
+Selection principles are in DESIGN.md §2.3: one grunt per biome plus an
+elite where there is a good one, fallback = the creature's own guaranteed
+drop, nothing huge, nothing with AoE.
+
+### Melee ladder (slots 0–3)
+
+| # | id | basePrefab | Faction | trophyPrefab | Rate | fallbackMaterial | Notes |
 |---|---|---|---|---|---|---|---|
-| 0 | greyling | `Greyling` | ForestMonsters | `TrophyGreydwarf` | 0.05 (from Greydwarf) | `Resin` | **Greylings drop no trophy.** Greydwarf trophy is the same biome/species family. |
-| 1 | skeleton | `Skeleton` | Undead | `TrophySkeleton` | 0.10 | `BoneFragments` | Also dropped by every `Skeleton_*` variant. |
-| 2 | draugr | `Draugr` | Undead | `TrophyDraugr` | 0.10 | `Entrails` | `Draugr_Ranged` drops the same trophy. |
-| 3 | draugr_elite | `Draugr_Elite` | Undead | `TrophyDraugrElite` | 0.10 | `Entrails` | |
-| 4 | fenring | `Fenring` | MountainMonsters | `TrophyFenring` | 0.10 | `WolfFang` | |
-| 5 | seeker | `Seeker` | MistlandsMonsters | `TrophySeeker` | 0.05 | `Carapace` | |
-| 6 | charred | `Charred_Melee` | Demon | `TrophyCharredMelee` | 0.05 | `CharredBone` | Ashlands. `Charred_Archer` / `Charred_Mage` are alternatives with their own trophies. |
-| 7 | jotun | `JotunWarrior` | DeepNorth | `TrophyJotunWarrior` | 0.10 | `Leatherstraps` | Deep North. `JotunWarriorDualWield` drops the same trophy. |
+| 0 | greyling | `Greyling` | ForestMonsters | *(none)* | — | `Resin` | **Material-only.** Greylings drop no trophy. |
+| 1 | greydwarf | `Greydwarf` | ForestMonsters | `TrophyGreydwarf` | 0.05 | `GreydwarfEye` | Also dropped by `Greydwarf_Frozen`. |
+| 2 | skeleton | `Skeleton` | Undead | `TrophySkeleton` | 0.10 | `BoneFragments` | Dropped by every `Skeleton_*` variant. Base prefab has random bow/melee; loadout must force melee. |
+| 3 | greydwarf_brute | `Greydwarf_Elite` | ForestMonsters | `TrophyGreydwarfBrute` | 0.10 | `GreydwarfEye` | |
+| 4 | draugr | `Draugr` | Undead | `TrophyDraugr` | 0.10 | `Entrails` | `Draugr_Ranged` drops the same trophy. |
+| 5 | draugr_elite | `Draugr_Elite` | Undead | `TrophyDraugrElite` | 0.10 | `Entrails` | |
+| 6 | wolf | `Wolf` | MountainMonsters | `TrophyWolf` | 0.10 | `WolfFang` | Already has `Tameable` + `Procreation`; strip `Procreation` on the clone. |
+| 7 | fenring | `Fenring` | MountainMonsters | `TrophyFenring` | 0.10 | `WolfFang` | Night spawn. |
+| 8 | fuling | `Goblin` | PlainsMonsters | `TrophyGoblin` | 0.10 | `BlackMetalScrap` | `GoblinArcher` drops the same trophy. |
+| 9 | fuling_berserker | `GoblinBrute` | PlainsMonsters | `TrophyGoblinBrute` | 0.05 | `BlackMetalScrap` | |
+| 10 | seeker | `Seeker` | MistlandsMonsters | `TrophySeeker` | 0.05 | `Carapace` | |
+| 11 | charred | `Charred_Melee` | Demon | `TrophyCharredMelee` | 0.05 | `CharredBone` | Ashlands. |
+| 12 | jotun | `JotunWarrior` | DeepNorth | `TrophyJotunWarrior` | 0.10 | `Leatherstraps` | Deep North. `JotunWarriorDualWield` drops the same trophy. **Model size unverified** — swap for `Skeleton_DeepNorth`, `Bjorn` or `Elaking` if giant-sized. |
 
-All eight base prefabs are `Humanoid + MonsterAI`, none has `Tameable`
-(must be added), none has `TimedDestruction`.
+### Ranged ladder (slot 4)
+
+| # | id | basePrefab | Faction | trophyPrefab | Rate | fallbackMaterial | Notes |
+|---|---|---|---|---|---|---|---|
+| 0 | skeleton_archer | `Skeleton` | Undead | `TrophySkeleton` | 0.10 | `BoneFragments` | Same prefab as melee tier 2; loadout forces a bow. |
+| 1 | draugr_archer | `Draugr_Ranged` | Undead | `TrophyDraugr` | 0.10 | `Entrails` | |
+| 2 | fuling_archer | `GoblinArcher` | PlainsMonsters | `TrophyGoblin` | 0.10 | `BlackMetalScrap` | |
+| 3 | charred_archer | `Charred_Archer` | Demon | `TrophyCharredArcher` | 0.05 | `CharredBone` | |
+
+All base prefabs are `Humanoid + MonsterAI`; only `Wolf` has `Tameable`
+(the rest need it added); none has `TimedDestruction`.
+
+### Friendly fire (verified 1.0.12)
+
+- `Projectile.OnHit`: for a non-player owner with `m_hitFriendly == false`,
+  the projectile ignores any character that is not an enemy of the owner.
+  Tamed archers are safe by default.
+- `Aoe.m_hitFriendly` defaults to **true**. Shaman clouds, mage AoEs and
+  breath attacks from a minion would hit the player. Casters are deferred
+  until each spawned AoE instance is patched to skip allies.
 
 ### Other viable candidates
 
