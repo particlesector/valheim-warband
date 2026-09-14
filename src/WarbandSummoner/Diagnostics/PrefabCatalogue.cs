@@ -19,8 +19,12 @@ namespace WarbandSummoner.Diagnostics
     {
         private static string OutputPath => Path.Combine(Paths.ConfigPath, "WarbandSummoner.catalogue.txt");
 
-        private static bool _trophiesWritten;
-        private static bool _creaturesWritten;
+        // Each section is captured once, independently, and the whole file is
+        // rewritten from whatever sections exist. The two patch points fire in
+        // different scenes (ObjectDB at the main menu, ZNetScene on world load),
+        // so nothing here may depend on which one runs first.
+        private static string? _trophySection;
+        private static string? _creatureSection;
 
         [HarmonyPatch(typeof(ObjectDB), nameof(ObjectDB.CopyOtherDB))]
         [HarmonyPostfix]
@@ -36,7 +40,7 @@ namespace WarbandSummoner.Diagnostics
 
         private static void DumpTrophies(ObjectDB db)
         {
-            if (!Plugin.DumpPrefabCatalogue.Value || _trophiesWritten || db.m_items.Count == 0) return;
+            if (!Plugin.DumpPrefabCatalogue.Value || _trophySection != null || db.m_items.Count == 0) return;
 
             var sb = new StringBuilder();
             sb.AppendLine("# Trophies (prefab name | shared name token)");
@@ -46,16 +50,14 @@ namespace WarbandSummoner.Diagnostics
                 if (drop == null || drop.m_itemData.m_shared.m_itemType != ItemDrop.ItemData.ItemType.Trophy) continue;
                 sb.AppendLine($"{go.name} | {drop.m_itemData.m_shared.m_name}");
             }
-            sb.AppendLine();
 
-            File.WriteAllText(OutputPath, sb.ToString());
-            _trophiesWritten = true;
-            Plugin.Log.LogInfo($"Trophy catalogue written to {OutputPath}");
+            _trophySection = sb.ToString();
+            WriteFile("trophy");
         }
 
         private static void DumpCreatures(ZNetScene scene)
         {
-            if (!Plugin.DumpPrefabCatalogue.Value || _creaturesWritten) return;
+            if (!Plugin.DumpPrefabCatalogue.Value || _creatureSection != null) return;
 
             var sb = new StringBuilder();
             sb.AppendLine("# Creatures (prefab | faction | components | drops)");
@@ -84,9 +86,17 @@ namespace WarbandSummoner.Diagnostics
                 sb.AppendLine($"{go.name} | {character.m_faction} | {string.Join("+", comps)} | {drops}");
             }
 
-            File.AppendAllText(OutputPath, sb.ToString());
-            _creaturesWritten = true;
-            Plugin.Log.LogInfo($"Creature catalogue appended to {OutputPath}");
+            _creatureSection = sb.ToString();
+            WriteFile("creature");
+        }
+
+        private static void WriteFile(string justCaptured)
+        {
+            var sb = new StringBuilder();
+            if (_trophySection != null) sb.Append(_trophySection).AppendLine();
+            if (_creatureSection != null) sb.Append(_creatureSection);
+            File.WriteAllText(OutputPath, sb.ToString());
+            Plugin.Log.LogInfo($"Prefab catalogue ({justCaptured} section captured) written to {OutputPath}");
         }
     }
 }
