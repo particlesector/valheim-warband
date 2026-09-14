@@ -79,6 +79,10 @@ namespace WarbandSummoner.Core.Config
             int container, float stamina, string? notes = null) =>
             Entry(id, displayName, basePrefab, trophy, fallback, container, stamina, notes);
 
+        // Every field is set here, empty strings and empty collections
+        // included, so the generated file shows the whole schema on every
+        // tier. Leaving one null would omit nothing (nulls are serialised)
+        // but would write "null" where a user expects "" or [].
         private static TierEntry Entry(string id, string displayName, string basePrefab, string trophy, string fallback,
             int container, float stamina, string? notes) => new TierEntry
         {

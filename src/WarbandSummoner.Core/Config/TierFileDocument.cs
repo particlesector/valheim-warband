@@ -89,31 +89,5 @@ namespace WarbandSummoner.Core.Config
             SummonStaminaCost,
             EquipmentLoadout,
             DamageModifierOverrides);
-
-        /// <summary>
-        /// The inverse of <see cref="ToDefinition"/>, used to write defaults.
-        /// Every field is written, empty strings included, so the generated
-        /// file shows the whole schema on every tier.
-        /// </summary>
-        public static TierEntry FromDefinition(TierDefinition tier, string? notes = null)
-        {
-            var entry = new TierEntry
-            {
-                Id = tier.Id,
-                DisplayName = tier.DisplayName,
-                BasePrefab = tier.BasePrefab,
-                TrophyPrefab = tier.TrophyPrefab,
-                TrophyCount = tier.TrophyCount,
-                FallbackMaterial = tier.FallbackMaterial,
-                FallbackCount = tier.FallbackCount,
-                ContainerSlots = tier.ContainerSlots,
-                SummonStaminaCost = tier.SummonStaminaCost,
-                EquipmentLoadout = new List<string>(tier.EquipmentLoadout),
-                DamageModifierOverrides = new Dictionary<string, string>(),
-                Notes = notes,
-            };
-            foreach (var kv in tier.DamageModifierOverrides) entry.DamageModifierOverrides[kv.Key] = kv.Value;
-            return entry;
-        }
     }
 }
