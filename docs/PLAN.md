@@ -69,29 +69,47 @@ Goal: a plugin that loads, logs its version, and a written answer to every
 
 DESIGN §2. Lives entirely in `WarbandSummoner.Core`. No game types.
 
-- [ ] `TierDefinition` record (all fields from §2.3) and `TierTable` (ordered,
+- [x] `TierDefinition` record (all fields from §2.3) and `TierTable` (ordered,
       validates ids unique, indices stable). A tier may be trophy-only,
       material-only, or both; neither is a validation error.
-- [ ] `SlotState` — `(tierIndex, rank)` or unowned. `SlotGroup` = a
+      `TierTable.Validate` returns every problem tagged with the tier id so
+      Phase 2 can log them all at once; the constructor throws
+      `TierTableException` carrying the same list.
+- [x] `SlotState` — `(tierIndex, rank)` or unowned. `SlotGroup` = a
       `TierTable` plus N slots. Two groups: melee (4 slots, slot 0 pre-owned
-      at (0, 1)) and ranged (1 slot, unowned).
-- [ ] `IInventoryView` — abstract "how many of item X do I have" so the
+      at (0, 1)) and ranged (1 slot, unowned). `SlotGroup.SetSlot` rejects
+      tier indices outside the ladder and ranks above the configured max, so
+      persisted state that no longer fits the config fails at load time.
+- [x] `IInventoryView` — abstract "how many of item X do I have" so the
       resolver is testable with a dictionary.
-- [ ] `UpgradeResolver.Resolve(slots, tiers, inventory, spendPriority)` →
-      either `NoOp(reason)` or `Purchase(slotIndex, newTier, newRank, cost)`.
-      Implements: highest affordable tier first; target-slot priority (unowned
-      → lower tier → same tier rank 1 → fall through to T−1); rank reset;
-      trophy-vs-fallback spend priority; per-tier trophyCount/fallbackCount.
-- [ ] Tests: skip-tier, rank reset on tier change, fallback used only when
-      trophy unaffordable (and inverted flag), material-only tier, fall-through
-      to lower tier when T offers nothing, no-op consumes nothing, slot 0 free,
-      ranged slot not free, max rank cap, full-maxed group → no-op, groups
-      never share a purchase.
-- [ ] Rank → `SetLevel` value mapping (`rank + 1`) as a single function with a
-      test, so the off-by-one lives in exactly one place.
+- [x] `UpgradeResolver.Resolve(group, inventory, spendPriority)` →
+      `UpgradeResult`: either `NoOp(reason)` or a `Purchase(slotIndex,
+      before, after, tier, cost)`. Implements: highest affordable tier first;
+      target-slot priority (unowned → lower tier → same tier below max rank →
+      walk down); rank reset; trophy-vs-fallback spend priority; per-tier
+      trophyCount/fallbackCount. The resolver never touches the inventory;
+      the plugin consumes `Purchase.Cost` and then calls `SlotGroup.Apply`.
+- [x] Tests: skip-tier, rank reset on tier change, fallback used only when
+      trophy unaffordable (and inverted flag), material-only tier, walk-down
+      past unaffordable tiers, no-op consumes nothing, slot 0 free, ranged
+      slot not free, max rank cap, full-maxed group → no-op, groups never
+      share a purchase, every example sentence in DESIGN §2.4 (including the
+      7 / 8 / 2 purchase counts).
+- [x] Rank → `SetLevel` value mapping (`rank + 1`) as a single function with a
+      test, so the off-by-one lives in exactly one place (`Ranks.ToCharacterLevel`).
 
-**Done when:** `dotnet test` green; resolver behaviour matches every example
-sentence in DESIGN §2.4.
+**Done.** Phase 1 complete; 48 tests green.
+
+Finding: DESIGN §2.4 step 4 ("fall through to T−1 when T offers nothing")
+is provably a no-op. Rule 2 means any slot below T benefits from T, so if T
+offers nothing every slot already sits at or above T and no lower tier can
+improve any of them. The resolver still walks down (cheap, and safe if the
+priority rules ever change), and the only real fall-through is past tiers
+the player cannot afford. Tested as such.
+
+Generalisation for `maxRank > 2`: rule 3 ranks up the lowest-ranked slot on
+tier T first, then lowest index — breadth over depth, consistent with the
+rest of the priority order.
 
 ---
 
