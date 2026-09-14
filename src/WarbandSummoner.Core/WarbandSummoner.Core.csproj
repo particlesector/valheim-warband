@@ -2,13 +2,23 @@
 
   <!--
     Game-agnostic progression logic: tier table, slots, ranks, upgrade
-    resolution. Must never reference Unity, Valheim, or BepInEx so it can be
-    unit-tested without the game.
+    resolution, and the tiers.json format. Must never reference Unity,
+    Valheim, or BepInEx so it can be unit-tested without the game.
   -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>WarbandSummoner.Core</RootNamespace>
     <AssemblyName>WarbandSummoner.Core</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Valheim 1.0.12 ships and uses Newtonsoft.Json 13.0.x (assembly version
+      13.0.0.0) in valheim_Data/Managed, so the plugin resolves this at
+      runtime from the game without deploying a copy. Keep the major version
+      pinned to 13 so the assembly identity keeps matching.
+    -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
 
 </Project>

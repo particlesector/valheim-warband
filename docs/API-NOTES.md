@@ -20,6 +20,19 @@ Line numbers refer to the decompiled output in `decompiled/assembly_valheim/`
 - Krafs.Publicizer 2.3.0 works on both game assemblies.
 - BepInEx names the config file by GUID:
   `BepInEx/config/particlesector.WarbandSummoner.cfg`.
+- The game ships **Newtonsoft.Json 13.0.2** (assembly `13.0.0.0`,
+  public key `30ad4fe6b2a6aeed`) in `valheim_Data/Managed` and
+  `assembly_valheim` references it, so it is always loaded. Core references
+  the NuGet 13.0.3 package (same identity) and the plugin deploys no copy.
+- Keyboard keys **not** bound by vanilla (`ZInput` defaults, keyboard
+  layout): `B H I J K L N O P U Y Z`. Everything else on the main block is
+  taken (`G` radial, `T` emote, `V` auto-pickup, `X` sit, `C` walk, `F`
+  forsaken power, `R` hide weapon, `Q` auto-run, `E` use, `M` map,
+  `1–8` hotbar, `Tab` inventory, `F5` console). Default mod keys are drawn
+  from the free set.
+- `UnityEngine.InputLegacyModule.dll` ships, so BepInEx's
+  `KeyboardShortcut` (legacy `Input.GetKey`) is expected to work; confirmed
+  at the first hotkey in Phase 3.
 - `Terminal.ConsoleCommand` constructor gained parameters in 1.0
   (`remoteCommand`, `onlyAdmin`). Jötunn 2.28 fails on this. Signature:
   ```

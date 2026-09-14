@@ -1,7 +1,8 @@
 using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using WarbandSummoner.Config;
+using WarbandSummoner.Core.Config;
 
 namespace WarbandSummoner
 {
@@ -13,27 +14,27 @@ namespace WarbandSummoner
         public const string Version = "0.1.0";
 
         internal static ManualLogSource Log = null!;
-        private Harmony? _harmony;
 
-        private ConfigEntry<bool> _enabled = null!;
-        internal static ConfigEntry<bool> DumpPrefabCatalogue = null!;
+        /// <summary>Every scalar setting, bound to the .cfg. Set before any patch runs.</summary>
+        internal static WarbandConfig Settings = null!;
+
+        /// <summary>The tier ladders, loaded once from tiers.json. Null while the plugin is disabled.</summary>
+        internal static TierLoadResult? Tiers;
+
+        private Harmony? _harmony;
 
         private void Awake()
         {
             Log = Logger;
+            Settings = new WarbandConfig(Config);
 
-            _enabled = Config.Bind("General", "Enabled", true,
-                "Master switch. When false the plugin loads but applies no patches.");
-
-            DumpPrefabCatalogue = Config.Bind("Debug", "DumpPrefabCatalogue", false,
-                "Write every creature and trophy prefab name to BepInEx/config/WarbandSummoner.catalogue.txt. " +
-                "Trophies are written at the main menu; creatures once a world is loaded. Useful when editing the tier table.");
-
-            if (!_enabled.Value)
+            if (!Settings.Enabled.Value)
             {
                 Log.LogInfo($"{Name} {Version} disabled by config.");
                 return;
             }
+
+            Tiers = TierConfigFile.Load(Log);
 
             _harmony = new Harmony(Guid);
             _harmony.PatchAll();
