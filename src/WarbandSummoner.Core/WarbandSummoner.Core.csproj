@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Game-agnostic progression logic: tier table, slots, ranks, upgrade
+    resolution. Must never reference Unity, Valheim, or BepInEx so it can be
+    unit-tested without the game.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>WarbandSummoner.Core</RootNamespace>
+    <AssemblyName>WarbandSummoner.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>

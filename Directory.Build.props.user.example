@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Path to your Valheim install (the folder containing valheim.exe). -->
+    <ValheimInstall>C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimInstall>
+  </PropertyGroup>
+</Project>
