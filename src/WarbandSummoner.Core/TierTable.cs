@@ -110,11 +110,11 @@ namespace WarbandSummoner.Core
         public int IndexOf(string id) =>
             id != null && _indexById.TryGetValue(id, out int i) ? i : -1;
 
-        public bool TryGet(string id, out TierDefinition tier)
+        /// <summary>The tier with this id (case-insensitive), or null.</summary>
+        public TierDefinition? Find(string id)
         {
             int i = IndexOf(id);
-            tier = i >= 0 ? _tiers[i] : null!;
-            return i >= 0;
+            return i >= 0 ? _tiers[i] : null;
         }
 
         public IEnumerator<TierDefinition> GetEnumerator() => ((IEnumerable<TierDefinition>)_tiers).GetEnumerator();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace WarbandSummoner.Core
 {
@@ -11,7 +12,11 @@ namespace WarbandSummoner.Core
     public sealed class TierDefinition
     {
         private static readonly IReadOnlyList<string> NoItems = Array.Empty<string>();
-        private static readonly IReadOnlyDictionary<string, string> NoOverrides = new Dictionary<string, string>();
+        // Shared across every tier without overrides, so it must be truly
+        // immutable: a bare Dictionary behind the read-only interface could be
+        // downcast and mutated for all of them at once.
+        private static readonly IReadOnlyDictionary<string, string> NoOverrides =
+            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
 
         /// <summary>Stable key used in config, persistence and logs.</summary>
         public string Id { get; }

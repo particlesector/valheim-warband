@@ -17,8 +17,8 @@ namespace WarbandSummoner.Tests
             Assert.Equal(TestLadders.Skeleton, table.IndexOf("skeleton"));
             Assert.Equal(TestLadders.Skeleton, table.IndexOf("SKELETON"));
             Assert.Equal(-1, table.IndexOf("troll"));
-            Assert.True(table.TryGet("greydwarf", out var greydwarf));
-            Assert.Equal("Greydwarf", greydwarf.BasePrefab);
+            Assert.Equal("Greydwarf", table.Find("greydwarf")?.BasePrefab);
+            Assert.Null(table.Find("troll"));
         }
 
         [Fact]
@@ -117,6 +117,19 @@ namespace WarbandSummoner.Tests
             });
 
             Assert.Empty(problems);
+        }
+
+        [Fact]
+        public void DefaultOverridesCannotBeMutatedThroughADowncast()
+        {
+            var a = new TierDefinition("a", "Wolf", trophyPrefab: "TrophyWolf");
+            var b = new TierDefinition("b", "Wolf", trophyPrefab: "TrophyWolf");
+
+            Assert.Empty(a.DamageModifierOverrides);
+            Assert.IsNotType<Dictionary<string, string>>(a.DamageModifierOverrides);
+            Assert.Throws<System.NotSupportedException>(() =>
+                ((IDictionary<string, string>)a.DamageModifierOverrides)["Fire"] = "Resistant");
+            Assert.Empty(b.DamageModifierOverrides);
         }
 
         [Fact]
