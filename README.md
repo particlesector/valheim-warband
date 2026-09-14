@@ -2,7 +2,7 @@
 
 A [Valheim](https://www.valheimgame.com/) mod that turns the player into a summoner. Command a squad of up to five persistent minions — four melee and one archer — that fight alongside you and carry your loot, unlocked and upgraded by spending creature trophies.
 
-> **Status:** pre-alpha. Design is complete; implementation has not started. Nothing here is playable yet.
+> **Status:** pre-alpha. Design is complete and the game-independent progression logic (tiers, slots, ranks, upgrade resolution) is implemented and unit-tested. Nothing in-game yet; see [docs/PLAN.md](docs/PLAN.md) for progress.
 
 ## Features
 
