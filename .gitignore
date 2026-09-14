@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+*.user
+.vs/
+.idea/
+
+# Local machine settings (game path etc.)
+Directory.Build.props.user
+
+# Decompiled game source — reference only, never committed
+decompiled/
+
+# Test results
+TestResults/

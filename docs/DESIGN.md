@@ -4,9 +4,9 @@ A Valheim mod that turns the player into a summoner: a squad of up to four
 persistent minions that fight and haul cargo, unlocked and upgraded by
 spending creature trophies.
 
-**Target game version:** Valheim 1.0.x (verify exact build before release)
+**Target game version:** Valheim 1.0.12
 **Framework:** BepInEx 5.4.2350+ / HarmonyX
-**Language:** C# (.NET Framework 4.6.2 class library)
+**Language:** C# (netstandard2.1 class library; the 1.0 game assemblies target netstandard 2.1)
 **Unity editor required:** No
 
 ---
@@ -100,16 +100,18 @@ Tiers are an ordered list defined in config. Each entry:
 
 Proposed initial ladder (starting points for tuning, not balance decisions):
 
-0. Greyling
+0. Greyling — **greylings drop no trophy**; bought with the Greydwarf trophy
+   (same biome and species family), resin fallback
 1. Skeleton
 2. Draugr
 3. Draugr Elite
 4. Fenring
 5. Seeker
-6. *(Ashlands tier — verify creature and trophy names against 1.0)*
-7. *(Deep North tier — new in 1.0. Creature and trophy prefab names are
-   unknown and must be researched in the game files before this tier can be
-   filled in.)*
+6. Charred Warrior (Ashlands)
+7. Jötun Warrior (Deep North)
+
+Prefab names, drop rates, and alternatives for every tier are in
+[PREFABS.md](PREFABS.md).
 
 The ladder is data. Adding, removing, or reordering tiers must require no
 code change.
@@ -409,14 +411,12 @@ rebuild to change:
 
 ## 7. Valheim 1.0 API notes
 
-**Everything in this section must be verified against the actual 1.0
-assemblies before implementation.** Valheim has no official modding API; all
-of it is Harmony patching against decompiled internals. The Deep North / 1.0
-update was the largest change to those internals since Early Access and
-shipped with no public test branch, so names and signatures below — drawn
-from pre-1.0 knowledge — may have moved.
+**Verified against 1.0.12 — see [API-NOTES.md](API-NOTES.md) for the
+actual member names, signatures, and behaviours.** Valheim has no official
+modding API; all of it is Harmony patching against decompiled internals.
+Re-verify on every game update.
 
-Relevant types, as of pre-1.0:
+Types involved (details in API-NOTES.md):
 
 - `Character` — `SetTamed(bool)`, `SetLevel(int)` (1-based), `Heal(...)`,
   `m_damageModifiers`
@@ -445,7 +445,7 @@ world load. Register in a `ZNetScene.Awake` postfix, not later.
 
 ### Known ecosystem state (September 2026)
 
-- BepInExPack_Valheim 5.4.2350 supports 1.0.
+- BepInEx 5.4.23.4 (BepInExPack_Valheim) loads on 1.0.12.
 - Jötunn has no official 1.0 build; a community rebuild exists as a stopgap.
   This mod does not depend on Jötunn.
 - Enabling crossplay disables BepInEx entirely — mods and crossplay are

@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>WarbandSummoner</RootNamespace>
+    <AssemblyName>WarbandSummoner</AssemblyName>
+    <!-- Core is shipped as a sibling DLL in the plugin folder, not merged. -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <!-- MSB3277: game assemblies reference newer BCL facades than the ref pack; benign. -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WarbandSummoner.Core\WarbandSummoner.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Game and framework references, all from the local install. -->
+  <ItemGroup>
+    <Reference Include="assembly_valheim">
+      <HintPath>$(ValheimManaged)\assembly_valheim.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>$(ValheimManaged)\assembly_utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ValheimManaged)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ValheimManaged)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(ValheimManaged)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(ValheimManaged)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>$(ValheimManaged)\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Expose private game members without reflection. -->
+  <ItemGroup>
+    <Publicize Include="assembly_valheim" />
+    <Publicize Include="assembly_utils" />
+  </ItemGroup>
+
+  <!-- Drop the built plugin straight into the game for testing. -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(ValheimInstall)' != '' And Exists('$(BepInExPlugins)')">
+    <ItemGroup>
+      <DeployFiles Include="$(OutDir)WarbandSummoner.dll;$(OutDir)WarbandSummoner.pdb;$(OutDir)WarbandSummoner.Core.dll;$(OutDir)WarbandSummoner.Core.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(BepInExPlugins)\WarbandSummoner" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Deployed to $(BepInExPlugins)\WarbandSummoner" />
+  </Target>
+
+</Project>

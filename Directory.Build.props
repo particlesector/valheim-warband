@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    Machine-specific settings live in Directory.Build.props.user (gitignored).
+    Copy Directory.Build.props.user.example to get started.
+    VALHEIM_INSTALL env var is honoured as a fallback.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.props.user" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.props.user')" />
+
+  <PropertyGroup>
+    <ValheimInstall Condition="'$(ValheimInstall)' == '' And '$(VALHEIM_INSTALL)' != ''">$(VALHEIM_INSTALL)</ValheimInstall>
+    <ValheimManaged>$(ValheimInstall)\valheim_Data\Managed</ValheimManaged>
+    <BepInExCore>$(ValheimInstall)\BepInEx\core</BepInExCore>
+    <BepInExPlugins>$(ValheimInstall)\BepInEx\plugins</BepInExPlugins>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+    <Authors>particlesector</Authors>
+    <Copyright>MIT</Copyright>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WarbandSummoner.Core/WarbandSummoner.Core.csproj" />
+    <Project Path="src/WarbandSummoner/WarbandSummoner.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WarbandSummoner.Tests/WarbandSummoner.Tests.csproj" />
+  </Folder>
+</Solution>
