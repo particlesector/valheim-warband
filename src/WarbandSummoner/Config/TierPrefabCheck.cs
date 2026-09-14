@@ -7,16 +7,18 @@ namespace WarbandSummoner.Config
 {
     /// <summary>
     /// The half of tiers.json validation that needs the game: do the prefab
-    /// names actually exist? Items are checked once ObjectDB is populated
-    /// (main menu), creatures once ZNetScene exists (world load). A
-    /// misspelled name is by far the likeliest edit mistake, and nothing in
-    /// the pure loader can catch it. Warnings only — the ladder still loads,
-    /// and the summon path (Phase 4) refuses the tier at use time.
+    /// names actually exist? Items are checked once per populated ObjectDB —
+    /// the main-menu copy and again the in-game one, since other mods
+    /// register items in the same Awake postfix in no defined order — and
+    /// creatures once ZNetScene exists (world load). A misspelled name is by
+    /// far the likeliest edit mistake, and nothing in the pure loader can
+    /// catch it. Warnings only — the ladder still loads, and the summon path
+    /// (Phase 4) refuses the tier at use time.
     /// </summary>
     [HarmonyPatch]
     internal static class TierPrefabCheck
     {
-        private static bool _itemsChecked;
+        private static ObjectDB? _lastItemDbChecked;
         private static bool _creaturesChecked;
 
         [HarmonyPatch(typeof(ObjectDB), nameof(ObjectDB.CopyOtherDB))]
@@ -33,8 +35,8 @@ namespace WarbandSummoner.Config
 
         private static void CheckItems(ObjectDB db)
         {
-            if (_itemsChecked || db.m_items.Count == 0) return;
-            _itemsChecked = true;
+            if (db == _lastItemDbChecked || db.m_items.Count == 0) return;
+            _lastItemDbChecked = db;
 
             int problems = 0;
             foreach (var (ladder, tier) in AllTiers())

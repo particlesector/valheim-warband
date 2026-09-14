@@ -32,9 +32,10 @@ namespace WarbandSummoner.Config
                 {
                     json = File.ReadAllText(path);
                 }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                catch (Exception ex)
                 {
-                    // Treat as missing for loading purposes, but never overwrite a file we could not read.
+                    // Any failure degrades to the defaults rather than failing plugin load. Treat as
+                    // missing for loading purposes, but never overwrite a file we could not read.
                     log.LogError($"[Tiers] Could not read {path}: {ex.Message}. Using the built-in default ladders.");
                     readFailed = true;
                 }
@@ -61,7 +62,7 @@ namespace WarbandSummoner.Config
                 File.WriteAllText(path, TierFileJson.Serialize(DefaultLadders.CreateDocument()));
                 log.LogInfo($"[Tiers] No {FileName} found; wrote the default ladders to {path}.");
             }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            catch (Exception ex)
             {
                 log.LogError($"[Tiers] Could not write the default {FileName} to {path}: {ex.Message}. Continuing with the built-in defaults.");
             }

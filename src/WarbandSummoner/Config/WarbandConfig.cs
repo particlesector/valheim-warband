@@ -126,12 +126,16 @@ namespace WarbandSummoner.Config
         }
 
         /// <summary>Formation point for a melee slot. Slots beyond the bound count get the default arc.</summary>
-        public FormationOffset MeleeOffset(int slotIndex) =>
-            slotIndex < _meleeOffsets.Length ? _meleeOffsets[slotIndex].Value : FormationOffset.DefaultMelee(slotIndex);
+        public FormationOffset MeleeOffset(int slotIndex) => Offset(_meleeOffsets, slotIndex, FormationOffset.DefaultMelee);
 
         /// <summary>Formation point for a ranged slot. Slots beyond the bound count get the default line.</summary>
-        public FormationOffset RangedOffset(int slotIndex) =>
-            slotIndex < _rangedOffsets.Length ? _rangedOffsets[slotIndex].Value : FormationOffset.DefaultRanged(slotIndex);
+        public FormationOffset RangedOffset(int slotIndex) => Offset(_rangedOffsets, slotIndex, FormationOffset.DefaultRanged);
+
+        private static FormationOffset Offset(OffsetEntry[] entries, int slotIndex, System.Func<int, FormationOffset> defaults)
+        {
+            if (slotIndex < 0) throw new System.ArgumentOutOfRangeException(nameof(slotIndex), slotIndex, "Slot index cannot be negative.");
+            return slotIndex < entries.Length ? entries[slotIndex].Value : defaults(slotIndex);
+        }
 
         private static OffsetEntry[] BindOffsets(ConfigFile config, string group, int count, System.Func<int, FormationOffset> defaults)
         {
