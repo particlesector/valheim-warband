@@ -12,7 +12,9 @@ namespace WarbandSummoner.Diagnostics
     /// Config-gated dump of every creature and trophy prefab the game knows
     /// about, for filling in the tier table. Trophies come from ObjectDB
     /// (available at the main menu); creatures come from ZNetScene (only
-    /// exists once a world is loaded).
+    /// exists once a world is loaded). Each humanoid's item pools are listed
+    /// too, because those are the only valid values for a tier's
+    /// equipmentLoadout — monster weapons are not in ObjectDB.
     /// </summary>
     [HarmonyPatch]
     internal static class PrefabCatalogue
@@ -40,7 +42,7 @@ namespace WarbandSummoner.Diagnostics
 
         private static void DumpTrophies(ObjectDB db)
         {
-            if (!Plugin.DumpPrefabCatalogue.Value || _trophySection != null || db.m_items.Count == 0) return;
+            if (!Plugin.Settings.DumpPrefabCatalogue.Value || _trophySection != null || db.m_items.Count == 0) return;
 
             var sb = new StringBuilder();
             sb.AppendLine("# Trophies (prefab name | shared name token)");
@@ -57,10 +59,11 @@ namespace WarbandSummoner.Diagnostics
 
         private static void DumpCreatures(ZNetScene scene)
         {
-            if (!Plugin.DumpPrefabCatalogue.Value || _creatureSection != null) return;
+            if (!Plugin.Settings.DumpPrefabCatalogue.Value || _creatureSection != null) return;
 
             var sb = new StringBuilder();
             sb.AppendLine("# Creatures (prefab | faction | components | drops)");
+            sb.AppendLine("#   followed by one indented line per item pool: default, weapon, armor, shield, set:<name>, random");
             foreach (var go in scene.m_prefabs.OrderBy(g => g.name))
             {
                 var character = go.GetComponent<Character>();
@@ -84,10 +87,43 @@ namespace WarbandSummoner.Diagnostics
                 }
 
                 sb.AppendLine($"{go.name} | {character.m_faction} | {string.Join("+", comps)} | {drops}");
+                AppendItemPools(sb, go.GetComponent<Humanoid>());
             }
 
             _creatureSection = sb.ToString();
             WriteFile("creature");
+        }
+
+        /// <summary>
+        /// The prefab's fixed and random equipment, by item prefab name. A
+        /// tier's equipmentLoadout must pick from these; anything else does
+        /// not exist on the creature.
+        /// </summary>
+        private static void AppendItemPools(StringBuilder sb, Humanoid? humanoid)
+        {
+            if (humanoid == null) return;
+
+            AppendPool(sb, "default", humanoid.m_defaultItems);
+            AppendPool(sb, "weapon", humanoid.m_randomWeapon);
+            AppendPool(sb, "armor", humanoid.m_randomArmor);
+            AppendPool(sb, "shield", humanoid.m_randomShield);
+            if (humanoid.m_randomSets != null)
+            {
+                foreach (var set in humanoid.m_randomSets)
+                    if (set != null) AppendPool(sb, $"set:{set.m_name}", set.m_items);
+            }
+            if (humanoid.m_randomItems != null && humanoid.m_randomItems.Length > 0)
+            {
+                sb.AppendLine("    random: " + string.Join(", ", humanoid.m_randomItems
+                    .Where(r => r?.m_prefab != null)
+                    .Select(r => $"{r.m_prefab.name}@{r.m_chance:0.###}")));
+            }
+        }
+
+        private static void AppendPool(StringBuilder sb, string label, GameObject[]? items)
+        {
+            if (items == null || items.Length == 0) return;
+            sb.AppendLine($"    {label}: " + string.Join(", ", items.Where(i => i != null).Select(i => i.name)));
         }
 
         private static void WriteFile(string justCaptured)

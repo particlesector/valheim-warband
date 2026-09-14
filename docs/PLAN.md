@@ -13,8 +13,8 @@ Update this file as phases complete. Tick boxes are the status tracker.
 
 | Milestone | Phases | Meaning |
 |---|---|---|
-| **M0 Foundation** | 0–1 | Builds, loads, pure logic tested. Nothing in-game yet. |
-| **M1 First minion** | 2–4 | Summon a greyling, quit, reload, it's still there. |
+| **M0 Foundation** | 0–2 | Builds, loads, pure logic tested, config regenerates. Nothing in-game yet. |
+| **M1 First minion** | 3–4 | Summon a greyling, quit, reload, it's still there. |
 | **MVP** | 5–7 | The class loop is playable: summon, heal, recall, upgrade, persist. |
 | **v1** | 8–12 | Everything in DESIGN.md. Balanced enough to ship. |
 
@@ -34,7 +34,8 @@ them here if you disagree.
 | Plugin GUID | `particlesector.WarbandSummoner` | GitHub org + mod name; conventional and collision-free |
 | Root namespace | `WarbandSummoner` | |
 | Project layout | Three projects: `WarbandSummoner.Core` (netstandard2.0, zero Unity/Valheim refs), `WarbandSummoner` (netstandard2.1 BepInEx plugin), `WarbandSummoner.Tests` (xunit, refs Core only) | Phase 1 logic is testable without launching the game — the single biggest time-saver in this project given every in-game test is a restart |
-| Tier table config format | Separate JSON file `BepInEx/config/WarbandSummoner.tiers.json`, default written on first run. Scalars stay in the normal `.cfg`. | BepInEx config is flat key/value; a list of structured records with nested loadouts and modifier maps does not fit it. JSON via Unity's `JsonUtility` needs no dependency. |
+| Tier table config format | Separate JSON file `BepInEx/config/WarbandSummoner.tiers.json`, default written on first run. Scalars stay in the normal `.cfg`. | BepInEx config is flat key/value; a list of structured records with nested loadouts and modifier maps does not fit it. |
+| JSON library | Newtonsoft.Json 13, which Valheim 1.0.12 ships in `valheim_Data/Managed` and uses itself. Core references the NuGet package (same assembly identity, `13.0.0.0`); nothing is deployed. | Unity's `JsonUtility` cannot serialise dictionaries (`damageModifierOverrides`) and only runs inside Unity, which would put the loader outside the unit tests. *(Decided in Phase 2.)* |
 | Player slot storage | `Player.m_customData` (string dictionary persisted with the character) | No Harmony patch needed; survives character transfer between worlds. Verified present in 1.0.12. |
 | Game path for builds | `VALHEIM_INSTALL` env var, or `Directory.Build.props.user` (gitignored) | Nobody's Steam path belongs in the repo |
 | Decompiled reference source | `ilspycmd` output into `decompiled/` (gitignored) | Section 7 verification needs the real 1.0 source in front of us, greppable |
@@ -117,20 +118,52 @@ rest of the priority order.
 
 DESIGN §6.
 
-- [ ] All scalar settings bound in the `.cfg`: keybinds, hold duration, both
-      recall cooldowns, heal radius/amount/cost, follow distance, four
-      formation offsets, slot count, max rank, drop-rate multiplier, spend
-      priority flag.
-- [ ] `tiers.json` loader: write default melee and ranged ladders if missing,
-      parse, validate (basePrefab non-empty, at least one of trophy/fallback,
-      counts ≥ 1, no duplicate ids), log every problem with the tier id, fall
-      back to defaults on fatal error rather than loading with zero tiers.
-- [ ] Config reload on `.cfg` change is nice-to-have; tiers.json reload is
-      **not** — tier index is persisted in ZDOs, so reordering at runtime is
-      unsafe. Document that tiers.json is read at startup only.
+- [x] All scalar settings bound in the `.cfg` (`WarbandConfig`): six
+      keybinds as `KeyboardShortcut` (Z summon, H heal, B recall, N attack
+      target, U upgrade, Shift+U upgrade ranged — none used by vanilla),
+      hold duration, both recall cooldowns and placement distance, heal
+      radius / percent-of-max-health / stamina cost, follow distance, one
+      formation offset per slot (`"right, forward"` strings, parsed by
+      `FormationOffset` with a logged fallback to the default arc), melee and
+      ranged slot counts, max rank, drop-rate multiplier, spend priority.
+      Numeric entries carry `AcceptableValueRange`s.
+- [x] `tiers.json` loader (`TierTableLoader`, in Core so it is unit-tested
+      with strings): missing file → defaults written; unparseable file or an
+      unknown key → both ladders default; each ladder validated
+      independently via `TierTable.Validate`, and an invalid ladder falls
+      back to its built-in default without discarding the other. Every
+      problem is logged with the ladder and tier id. A `version` stamp warns
+      when the file predates the current format.
+- [x] `DefaultLadders`: the PREFABS.md ladders as data (13 melee, 4 ranged),
+      every field written on every tier so the generated file shows the
+      schema, plus a `notes` field per tier for the Phase 12 reasoning.
+- [x] `TierPrefabCheck`: once ObjectDB / ZNetScene exist, every trophy,
+      fallback and base prefab name in the ladders is resolved and any miss
+      is logged with its tier id — the pure loader cannot catch a typo in a
+      prefab name.
+- [x] Reload policy documented in `TierConfigFile` and README: scalar
+      entries are read live (ConfigurationManager edits apply at once);
+      slot counts and tiers.json are read at startup only.
 
 **Done when:** deleting both config files and launching regenerates them
 with sane defaults; a deliberately broken tiers.json logs a clear error.
+
+**Done** in code and unit tests (45 new, 94 total); the in-game half of the
+exit criterion (delete both files, launch, break tiers.json, launch) is the
+first item of the Phase 3 test session.
+
+Findings:
+
+- `equipmentLoadout` is empty in every default tier. Monster weapons
+  (`skeleton_bow` and friends) are not in ObjectDB, so their names cannot be
+  verified from the catalogue as it stood; the dump now lists each
+  humanoid's `m_defaultItems` / `m_randomWeapon` / `m_randomArmor` /
+  `m_randomShield` / `m_randomSets` pools. Filling the two skeleton tiers'
+  loadouts from that output is a Phase 4 item, since that is where the
+  loadout is applied.
+- Heal amount is a percentage of max health, not flat HP: a single flat
+  number cannot be meaningful across a ladder whose top tier has an order of
+  magnitude more health than its bottom.
 
 ---
 
@@ -166,6 +199,15 @@ DESIGN §3.1, §3.3, §7 critical note. Highest 1.0 risk; budget time.
       random weapon/armour arrays emptied (the `Skeleton` prefab is used by
       both ladders and must be forced melee or bow). Strip `Procreation` if
       present. Compare against vanilla's `Wolf_spiritcaller` / `Skeleton_Friendly`.
+- [ ] Fill `equipmentLoadout` for the `skeleton` and `skeleton_archer`
+      default tiers from the catalogue dump's item-pool lines (Phase 2
+      finding), record the verified names in PREFABS.md, and bump
+      `TierFileDocument.CurrentVersion` so existing files get the
+      regenerate-me warning. Loadout names must resolve against the base
+      prefab's own pools; log and skip any that do not.
+- [ ] Confirm `KeyboardShortcut.IsDown()` (legacy `Input.GetKey`) works on
+      1.0.12 at the first hotkey; `UnityEngine.InputLegacyModule.dll` ships,
+      so it should.
 - [ ] `MinionSetup` component on the clone: on `Awake`, read tier/rank from
       ZDO and apply tame, follow (via `s_follow` = player name), `SetLevel`,
       damage modifiers, `Physics.IgnoreCollision` with the local player.

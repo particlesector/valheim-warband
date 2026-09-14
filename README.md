@@ -2,7 +2,7 @@
 
 A [Valheim](https://www.valheimgame.com/) mod that turns the player into a summoner. Command a squad of up to five persistent minions — four melee and one archer — that fight alongside you and carry your loot, unlocked and upgraded by spending creature trophies.
 
-> **Status:** pre-alpha. Design is complete and the game-independent progression logic (tiers, slots, ranks, upgrade resolution) is implemented and unit-tested. Nothing in-game yet; see [docs/PLAN.md](docs/PLAN.md) for progress.
+> **Status:** pre-alpha. Design is complete; the game-independent progression logic (tiers, slots, ranks, upgrade resolution) and the configuration layer (`.cfg` settings, `tiers.json` ladders) are implemented and unit-tested. Nothing in-game yet; see [docs/PLAN.md](docs/PLAN.md) for progress.
 
 ## Features
 
@@ -14,7 +14,7 @@ A [Valheim](https://www.valheimgame.com/) mod that turns the player into a summo
 - **Abilities on hotkeys:** summon, AoE heal, recall (tap for one, hold for all), attack my target, upgrade slot.
 - **Pack mules.** Every minion carries a container sized to its tier.
 - **Formation following** with a raised follow distance so four bodies don't trap you in a doorway.
-- **Config-first.** The tier ladder, costs, keybinds, cooldowns, radii, offsets and slot count all live in the BepInEx config file.
+- **Config-first.** The tier ladders, costs, keybinds, cooldowns, radii, offsets and slot counts all live in two config files; nothing is hard-coded.
 
 Minions are clones of existing game creatures — no custom models, items, or asset bundles.
 
@@ -29,8 +29,26 @@ Solo and local worlds only. Multiplayer and dedicated servers are not supported 
 ## Installation
 
 1. Install BepInExPack Valheim.
-2. Drop `WarbandSummoner.dll` into `BepInEx/plugins/`.
-3. Launch the game once to generate `BepInEx/config/particlesector.WarbandSummoner.cfg`, then edit to taste.
+2. Drop the `WarbandSummoner` folder (`WarbandSummoner.dll` and `WarbandSummoner.Core.dll`) into `BepInEx/plugins/`.
+3. Launch the game once to generate the two config files, then edit to taste.
+
+## Configuration
+
+Two files in `BepInEx/config/`, both written with defaults on first launch:
+
+- **`particlesector.WarbandSummoner.cfg`** — every scalar setting: keybinds, recall hold time and cooldowns, heal radius / amount / cost, follow distance, one formation offset per slot, slot counts, max rank, trophy drop-rate multiplier, spend priority. Each entry is documented in the file. Most are read live, so edits through ConfigurationManager apply immediately; the slot counts are read at startup.
+- **`WarbandSummoner.tiers.json`** — the melee and ranged tier ladders: which creature each tier clones, what it costs (trophy and/or fallback material, with per-tier counts), pack size, summon stamina, equipment loadout and damage-modifier overrides. Read **at startup only** — a tier's position in its list is what gets saved on your character and your minions, so reordering while a world is loaded is unsafe. Delete the file to regenerate the defaults. A file that will not parse, or a ladder that fails validation, is logged tier-by-tier in `BepInEx/LogOutput.log` and replaced by the built-in default for that ladder; the mod never runs with zero tiers. Prefab names are checked against the game once it has loaded; a misspelling is logged with its tier id. See [docs/PREFABS.md](docs/PREFABS.md) for valid names.
+
+Default keys — all rebindable, none used by vanilla:
+
+| Key | Action |
+|---|---|
+| `Z` | Summon into the lowest empty owned slot |
+| `H` | Heal minions in range |
+| `B` | Recall — tap for the strongest living minion, hold for all |
+| `N` | Attack the creature under the crosshair |
+| `U` | Upgrade a melee slot (spends a trophy or its fallback) |
+| `Shift+U` | Upgrade the ranged slot |
 
 ## Building
 
@@ -40,7 +58,7 @@ Requires the .NET SDK (8.0 or later) and a Valheim install with BepInEx.
 2. `dotnet build` — the plugin is copied into `BepInEx/plugins/WarbandSummoner/` automatically.
 3. `dotnet test` runs the game-independent unit tests.
 
-Game assemblies are referenced from your install and publicized at build time via Krafs.Publicizer; no reflection is needed to reach private members.
+Game assemblies are referenced from your install and publicized at build time via Krafs.Publicizer; no reflection is needed to reach private members. `tiers.json` is read with Newtonsoft.Json 13, which the game ships in `valheim_Data/Managed` — the build references the matching NuGet package for the tests but deploys nothing extra.
 
 ## Documentation
 
